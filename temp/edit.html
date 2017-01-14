@@ -1,0 +1,25 @@
+{% extends "index.html" %}
+{% block content %}
+    <div class="col-md-4"></div>
+    <div class="col-md-4">
+        <form method="POST">
+            <div class="form-group">
+                <label for="subject">Subject</label>
+                <input type="text" name="subject" class="form-control" value="{{blogpost.subject}}">
+            </div>
+            <div class="form-group">
+                <label for="post">Content</label>
+                <textarea class="form-control" rows="5" id="comment"name="post"> {{blogpost.content}} </textarea>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-default" class="form-control">Submit</button>
+                 <a class="btn btn-default" href="/welcome" role="button">Cancel</a>
+            </div>
+        </form>
+        <br>
+        {% if error %}
+            <div class="alert alert-danger" role="alert"> {{error}} </div>
+        {% endif %}
+    </div>
+    <div class="col-md-4"></div>
+{% endblock %}

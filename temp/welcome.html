@@ -1,0 +1,20 @@
+{% extends "index.html" %}
+{% block content%}
+<div class="col-md-4"></div>
+<div class="col-md-4">
+    Welcome, {{username}}
+    <ul class="list-group">
+    {% for bpost in  blog_post %}
+        <li class="list-group-item">
+            Title: {{ bpost.subject }}
+            <p>
+                Content: {{ bpost.content }}
+            </p>
+            <a class="btn btn-default" href="/edit?post_id={{bpost.key().id_or_name()}}" role="button">Edit</a>
+            <a class="btn btn-default" href="#" role="button">Delete</a>
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+<div class="col-md-4"></div>
+{% endblock %}

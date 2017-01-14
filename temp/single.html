@@ -1,0 +1,18 @@
+{% extends "index.html" %}
+{% block content %}
+    <div class="col-md-4"></div>
+    <div class="col-md-4">
+        <h3>TITLE: <span>{{blogpost.subject}}</span></h3>
+        <blockquote>
+            POST:
+            <p>
+                <h4>
+                    {{blogpost.content}}
+                </h4>
+            </p>
+        </blockquote>
+        <a class="btn btn-default" href="/edit?post_id={{post_id}}" role="button">Edit</a>
+        <a class="btn btn-default" href="#" role="button">Delete</a>
+    </div>
+    <div class="col-md-4"></div>
+{% endblock %}
