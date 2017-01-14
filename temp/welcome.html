@@ -1,19 +1,18 @@
-{% extends "index.html" %}
-{% block content%}
+{% extends "index.html" %} {% block content%}
 <div class="col-md-4"></div>
 <div class="col-md-4">
     Welcome, {{username}}
     <ul class="list-group">
-    {% for bpost in  blog_post %}
+        {% for bpost in blog_post %}
         <li class="list-group-item">
-            Title: {{ bpost.subject }}
-            <p>
-                Content: {{ bpost.content }}
-            </p>
+            <h4><span class="label label-primary"> Title: {{ bpost.subject }}</span></h4>
+            <div class="well well-lg">
+                {{ bpost.content }}
+            </div>
             <a class="btn btn-default" href="/edit?post_id={{bpost.key().id_or_name()}}" role="button">Edit</a>
-            <a class="btn btn-default" href="#" role="button">Delete</a>
+            <a class="btn btn-default" href="/delete?post_id={{bpost.key().id_or_name()}}" role="button">Delete</a>
         </li>
-    {% endfor %}
+        {% endfor %}
     </ul>
 </div>
 <div class="col-md-4"></div>

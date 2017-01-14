@@ -56,12 +56,15 @@ class Handler(webapp2.RequestHandler):
 
 class MainPage(Handler):
     """ Application Landing Page """
+    def last_20(self):
+        records = db.GqlQuery("select * from BlogPost order by created desc")
+        return records.fetch(limit=20)
 
     def get(self):
         """ render the main application landing page """
         user_d = self.request.cookies.get('user_id')
         if user_d:
-            index_dic = {'title':"Rayons Blog", "logout":"Logout"}
+            index_dic = {'title':"Rayons Blog", "logout":"Logout", "blogs":self.last_20()}
         else:
             index_dic = {'title':"Rayons Blog"}
         self.render("index.html", **index_dic)
@@ -147,7 +150,6 @@ class Welcome(Handler):
     def post_by_user(self, created_by):
         """ get post by user """
         records = db.GqlQuery("select * from BlogPost where created_by = :1 order by created desc", created_by)
-        #records = BlogPost.query(BlogPost.created_by == created_by).fetch(limit=10)
         return records.fetch(limit=10)
 
     def get(self):
@@ -278,6 +280,21 @@ class Edit(Handler):
                     self.render("/edit.html", **details)
             else:
                 self.redirect("/signup")
+    
+class Delete(Handler):
+    """ delete records """
+    def get(self):
+        user_d = self.request.cookies.get('user_id')
+        post_id = self.request.get("post_id")
+        blogpost = BlogPost.get_by_id(int(post_id))
+        if user_d:
+            if blogpost.created_by == user_d.split("|")[0]:
+                blogpost.delete()
+                self.redirect("/welcome")
+            else:
+                self.redirect("/login")
+        else:
+            self.redirect("/login")
 
         
 
@@ -285,5 +302,5 @@ class Edit(Handler):
 app = webapp2.WSGIApplication([
     ('/', MainPage), ('/signup', Signup), ('/welcome', Welcome),
     ('/login', Login), ('/logout', Logout), ('/new', NewPost),
-    ('/single', SinglePost), ('/edit', Edit)] ,debug=True)
+    ('/single', SinglePost), ('/edit', Edit), ('/delete', Delete)] ,debug=True)
 
