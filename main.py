@@ -30,6 +30,20 @@ class BlogPost(db.Model):
     created_by = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
 
+class Plikes(db.Model):
+    """ Blog like model"""
+    blogpost = db.ReferenceProperty(BlogPost)
+    blog_id = db.StringProperty(required=True)
+    created_by = db.StringProperty(required=True)
+    created = db.DateTimeProperty(auto_now_add=True)
+
+
+class Comments(db.Model):
+    blogpost = db.ReferenceProperty(BlogPost)
+    comment = db.TextProperty(required=True)
+    created_by = db.StringProperty(required=True)
+    blog_id = db.StringProperty(required=True)
+    created = db.DateTimeProperty(auto_now_add=True)
 
 
 class Handler(webapp2.RequestHandler):
@@ -57,14 +71,25 @@ class Handler(webapp2.RequestHandler):
 class MainPage(Handler):
     """ Application Landing Page """
     def last_20(self):
-        records = db.GqlQuery("select * from BlogPost order by created desc")
+        records = db.GqlQuery("select * from BlogPost order by created desc limit 20")
         return records.fetch(limit=20)
+
+    def like_count(self, blog_id):
+        """ get count of likes by blog id"""
+        likes = Plikes.all()
+        count = likes.filter("blog_id =", str(blog_id)).count()
+        return count
 
     def get(self):
         """ render the main application landing page """
         user_d = self.request.cookies.get('user_id')
+        total_count = 0
         if user_d:
-            index_dic = {'title':"Rayons Blog", "logout":"Logout", "blogs":self.last_20()}
+            for blod in self.last_20():
+                post_id = blod.key().id_or_name()
+                total_count = self.like_count(post_id) + total_count
+            index_dic = {'title':"Rayons Blog", 'logout':'Logout',
+                         'blogs':self.last_20(), 'like_count':total_count}
         else:
             index_dic = {'title':"Rayons Blog"}
         self.render("index.html", **index_dic)
@@ -125,7 +150,7 @@ class Signup(Handler):
             hash_pass = self.hash_str(password, secret)
             user = User(username=user, password=hash_pass, secret=secret, email=email)
             user.put()
-            user_id = c.key().id()
+            user_id = user.key().id()
             self.response.headers.add_header(
                 'Set-Cookie', 'user_id=%s|%s; Path=/' % (user_id, hash_pass))
             self.redirect("/welcome")
@@ -149,8 +174,12 @@ class Welcome(Handler):
     """ main user landing page after login """
     def post_by_user(self, created_by):
         """ get post by user """
-        records = db.GqlQuery("select * from BlogPost where created_by = :1 order by created desc", created_by)
+        records = db.GqlQuery(
+            "select * from BlogPost where created_by = :1 order by created desc", created_by)
         return records.fetch(limit=10)
+    
+    def get_likes(self):
+        """ get likes """    
 
     def get(self):
         #added pause to allow DB to update for First time User
@@ -190,7 +219,7 @@ class Login(Handler):
             if user_d[0].password == pass_hash:
                 user_id = user_d[0].key().id()
                 self.response.headers.add_header('Set-Cookie', 'user_id=%s|%s; Path=/ ' % (user_id,pass_hash))
-                self.redirect("/welcome")
+                self.redirect("/")
             else:
                 error = "Invalid Password"
                 self.render("login.html", **{"username":user, "error":error})
@@ -201,7 +230,7 @@ class Login(Handler):
 class Logout(Handler):
     def get(self):
         self.response.delete_cookie('user_id')
-        self.redirect("/signup")
+        self.redirect("/login")
 
 class NewPost(Handler):
     """ new blog post class """
@@ -213,7 +242,7 @@ class NewPost(Handler):
             details = {"logout":"Logout"}
             self.render("new.html", **details)
         else:
-            self.redirect("/signup")
+            self.redirect("/login")
 
     def post(self):
         """ create new blog post """
@@ -255,9 +284,9 @@ class Edit(Handler):
                 details = {"blogpost":blogpost, "logout":'Logout', 'post_id':post_id}
                 self.render("/edit.html", **details)
             else:
-                self.redirect("/signup")
+                self.redirect("/login")
         else:
-            self.redirect("/signup")
+            self.redirect("/login")
 
     def post(self):
         """ supdate blog post """
@@ -279,8 +308,8 @@ class Edit(Handler):
                                "error":"you need both subject and content"}
                     self.render("/edit.html", **details)
             else:
-                self.redirect("/signup")
-    
+                self.redirect("/login")
+
 class Delete(Handler):
     """ delete records """
     def get(self):
@@ -296,11 +325,78 @@ class Delete(Handler):
         else:
             self.redirect("/login")
 
-        
+class Likes(Handler):
+    """ likes or unlike post"""
+    def count_likes(self, created_by, blog_id):
+        results = db.GqlQuery(
+            "select * from Plikes where created_by = :1 and blog_id = :2", created_by, blog_id)
+        count = results.fetch(limit=1)
+        if count <> []:
+            return 0
+        else:
+            return 1
+
+    def unlike(self,user_id, blog_id):
+       results = db.GqlQuery(
+           "select * from Plikes where created_by = :1 and blog_id = :2", user_id, blog_id)
+       results.fetch(limit=1)
+       if results <> []:
+          results[0].delete()
+       else:
+           pass
+
+
+    def get(self):
+        user_d = self.request.cookies.get('user_id').split("|")[0]
+        post_id = self.request.get("post_id")
+        req_type = self.request.get("type")
+        blogpost = BlogPost.get_by_id(int(post_id))
+        if user_d:
+            if blogpost.created_by == user_d:
+                self.redirect("/error?error=You Cannot Like Your Own Post")
+            else:
+                if req_type == 'unlike':
+                    self.unlike(user_d, post_id)
+                    time.sleep(0.2)
+                    self.redirect("/")
+                else:
+                    count = self.count_likes(user_d, post_id)
+                    if count == 1:
+                        likes = Plikes(created_by=user_d, blog_id=post_id)
+                        likes.put()
+                        time.sleep(0.2)
+                        self.redirect("/")
+                    else:
+                        self.redirect("/error?error=You Already Liked This Post")
+        else:
+            self.redirect("/login")
+
+class Comment(Handler):
+    """ add comment """
+    def get(self):
+        user_d = self.request.cookies.get('user_id')
+        post_id = self.request.get("post_id")
+        blogpost = BlogPost.get_by_id(int(post_id))
+        if user_d:
+            pass
+        else:
+            pass
+
+class ErrorHandler(Handler):
+    def get(self):
+        user_d = self.request.cookies.get('user_id')
+        error = self.request.get("error")
+        if user_d:
+            context = {'error': error, "logout":'Logout'}
+        else:
+            context = {'error': error}
+        self.render("/error.html", **context)
+
 
 
 app = webapp2.WSGIApplication([
     ('/', MainPage), ('/signup', Signup), ('/welcome', Welcome),
     ('/login', Login), ('/logout', Logout), ('/new', NewPost),
-    ('/single', SinglePost), ('/edit', Edit), ('/delete', Delete)] ,debug=True)
+    ('/single', SinglePost), ('/edit', Edit), ('/delete', Delete),
+    ('/like', Likes), ('/error', ErrorHandler)], debug=True)
 
