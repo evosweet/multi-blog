@@ -27,12 +27,12 @@
                 <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                     <ul class="nav navbar-nav">
                         {% if logout %}
-                        <li><a href="/welcome">My Post</a></li>
-                        <li><a href="/new">New Post</a></li>
-                        <li><a href="/logout">{{logout}}</a></li>
+                            <li><a href="/welcome">My Post</a></li>
+                            <li><a href="/new">New Post</a></li>
+                            <li><a href="/logout">{{logout}}</a></li>
                         {% else %}
-                        <li><a href="/login">Login</a></li>
-                        <li><a href="/signup">Signup</a></li>
+                            <li><a href="/login">Login</a></li>
+                            <li><a href="/signup">Signup</a></li>
                         {% endif %}
                     </ul>
                 </div>
@@ -42,21 +42,25 @@
         </nav>
         {% block content%}
         <div class="jumbotron">
-            <h1>Welcome To The Blog !!!</h1>
+            <h1>Welcome {{username}}</h1>
         </div>
         {% for bpost in blogs %}
-        <li class="list-group-item">
-            <h4><span class="label label-primary"> Title: {{ bpost.subject }}</span></h4>
-            <div class="well well-lg">
-                {{ bpost.content }}
-                {{ bpost.likes }}
-                {{ like_count }}
-            </div>
-            <div class="alert alert-warning" role="alert">{{error}}</div>
-            <a class="btn btn-default-sm" href="/like?post_id={{bpost.key().id_or_name()}}" role="button">Like</a>
-            <a class="btn btn-default-sm" href="/like?post_id={{bpost.key().id_or_name()}}&type=unlike" role="button">Unlike</a>
-            <a class="btn btn-default-sm" href="/like?post_id={{bpost.key().id_or_name()}}" role="button">Comment</a>
-        </li>
+            <li class="list-group-item">
+                <h4><span class="label label-primary"> Title: {{ bpost.subject }}</span></h4>
+                <div class="well well-lg">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Post Likes {{ like_count[ bpost.key().id_or_name()] }} </div>
+                        <div class="panel-body">
+                            {{ bpost.content }}
+                        </div>
+                    </div>
+                </div>
+                <a class="btn btn-default-sm" href="/like?post_id={{bpost.key().id_or_name()}}" role="button">Like</a>
+                <a class="btn btn-default-sm" href="/like?post_id={{bpost.key().id_or_name()}}&type=unlike" role="button">Unlike</a>
+                <a class="btn btn-default-sm" href="/comment?post_id={{bpost.key().id_or_name()}}" role="button">Comment</a>
+                <a class="btn btn-sm" href="/edit?post_id={{bpost.key().id_or_name()}}" role="button">Edit</a>
+                <a class="btn btn-sm" href="/single?post_id={{bpost.key().id_or_name()}}" role="button">Read More</a>
+            </li>
         {% endfor %} {% endblock %}
     </div>
 </body>

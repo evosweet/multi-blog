@@ -38,7 +38,8 @@ class Plikes(db.Model):
     created = db.DateTimeProperty(auto_now_add=True)
 
 
-class Comments(db.Model):
+class Bcomments(db.Model):
+    """ Blog comment model """
     blogpost = db.ReferenceProperty(BlogPost)
     comment = db.TextProperty(required=True)
     created_by = db.StringProperty(required=True)
@@ -83,13 +84,15 @@ class MainPage(Handler):
     def get(self):
         """ render the main application landing page """
         user_d = self.request.cookies.get('user_id')
-        total_count = 0
+        total_count = {}
         if user_d:
+            user_id = user_d.split("|")[0]
+            user = User.get_by_id(int(user_id))
             for blod in self.last_20():
                 post_id = blod.key().id_or_name()
-                total_count = self.like_count(post_id) + total_count
+                total_count[post_id] = self.like_count(post_id)
             index_dic = {'title':"Rayons Blog", 'logout':'Logout',
-                         'blogs':self.last_20(), 'like_count':total_count}
+                         'blogs':self.last_20(), 'like_count':total_count, 'username':user.username}
         else:
             index_dic = {'title':"Rayons Blog"}
         self.render("index.html", **index_dic)
@@ -263,12 +266,19 @@ class NewPost(Handler):
 
 class SinglePost(Handler):
      """ display single post"""
-    
+     def get_comments(self, blog_id):
+         """ get comments for a single post """
+         records = db.GqlQuery("select * from Bcomments where blog_id = :1", blog_id)
+         return records.fetch(limit=100)
+
+
      def get(self):
         """ render single blog post """
         post_id = self.request.get("post_id")
         blogpost = BlogPost.get_by_id(int(post_id))
-        details = {"blogpost":blogpost, "logout":'Logout','post_id':post_id}
+        comments = self.get_comments(post_id)
+        details = {"blogpost":blogpost, "logout":'Logout', 'post_id':post_id,
+                   'comments': comments}
         self.render("/single.html", **details)
 
 class Edit(Handler):
@@ -284,7 +294,7 @@ class Edit(Handler):
                 details = {"blogpost":blogpost, "logout":'Logout', 'post_id':post_id}
                 self.render("/edit.html", **details)
             else:
-                self.redirect("/login")
+                self.redirect("/error?error=You cannot edit this post")
         else:
             self.redirect("/login")
 
@@ -343,7 +353,7 @@ class Likes(Handler):
        if results <> []:
           results[0].delete()
        else:
-           pass
+           pass #do nothing
 
 
     def get(self):
@@ -378,9 +388,26 @@ class Comment(Handler):
         post_id = self.request.get("post_id")
         blogpost = BlogPost.get_by_id(int(post_id))
         if user_d:
-            pass
+            context = {"logout":'Logout', 'post_id':post_id}
+            self.render("/comment.html", **context)
         else:
-            pass
+            self.redirect("/login")
+
+    def post(self):
+        user_d = self.request.cookies.get('user_id').split("|")[0]
+        post_id = self.request.get("post_id")
+        comment = self.request.get("comment")
+        if user_d:
+            if comment:
+                comment = Bcomments(comment=comment, created_by=user_d, blog_id=post_id)
+                comment.put()
+                time.sleep(0.2)
+                self.redirect("/single?post_id="+post_id)
+            else:
+                context = {'error':'you need to submit a comment !!!', "logout":'Logout'}
+                self.render("/comment.html", **context)
+        else:
+            self.redirect("/login")
 
 class ErrorHandler(Handler):
     def get(self):
@@ -398,5 +425,5 @@ app = webapp2.WSGIApplication([
     ('/', MainPage), ('/signup', Signup), ('/welcome', Welcome),
     ('/login', Login), ('/logout', Logout), ('/new', NewPost),
     ('/single', SinglePost), ('/edit', Edit), ('/delete', Delete),
-    ('/like', Likes), ('/error', ErrorHandler)], debug=True)
+    ('/like', Likes), ('/error', ErrorHandler), ('/comment', Comment)], debug=True)
 

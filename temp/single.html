@@ -11,6 +11,16 @@
     </div>
     <a class="btn btn-default" href="/edit?post_id={{post_id}}" role="button">Edit</a>
     <a class="btn btn-default" href="/delete?post_id={{post_id}}" role="button">Delete</a>
+<div class="panel panel-default">
+     <div class="panel-heading">Comments</div>
+    <div class="panel-body">
+        <ul class="list-group">
+        {% for comment in comments %}
+                <li class="list-group-item"> {{ comment.comment }} </li>
+        {% endfor %}
+        </ul>
+    </div>
+</div>
 </div>
 <div class="col-md-4"></div>
 {% endblock %}
