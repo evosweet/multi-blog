@@ -1,15 +1,20 @@
 import os
 import webapp2
 import jinja2
-import random, string, time, re, hmac
+import random
+import string
+import time
+import re
+import hmac
 from google.appengine.ext import db
 
-#load template path folder
-template_dir = os.path.join(os.path.dirname(__file__),'temp')
-#load templateing engine 
-jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape=True)
+# load template path folder
+template_dir = os.path.join(os.path.dirname(__file__), 'temp')
+# load templateing engine
+jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(template_dir), autoescape=True)
 
-# Global regrex 
+# Global regrex
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 PASS_RE = re.compile(r"^.{3,20}$")
 EMAIL_RE = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
@@ -23,16 +28,18 @@ class User(db.Model):
     email = db.StringProperty()
     created = db.DateTimeProperty(auto_now_add=True)
 
+
 class BlogPost(db.Model):
     """ application blog model """
     subject = db.StringProperty(required=True)
     content = db.TextProperty(required=True)
     created_by = db.StringProperty(required=True)
+    username = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
+
 
 class Plikes(db.Model):
     """ Blog like model"""
-    blogpost = db.ReferenceProperty(BlogPost)
     blog_id = db.StringProperty(required=True)
     created_by = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
@@ -40,10 +47,10 @@ class Plikes(db.Model):
 
 class Bcomments(db.Model):
     """ Blog comment model """
-    blogpost = db.ReferenceProperty(BlogPost)
     comment = db.TextProperty(required=True)
     created_by = db.StringProperty(required=True)
     blog_id = db.StringProperty(required=True)
+    username = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
 
 
@@ -68,11 +75,12 @@ class Handler(webapp2.RequestHandler):
         self.write(self.render_str(template, **kw))
 
 
-
 class MainPage(Handler):
     """ Application Landing Page """
+
     def last_20(self):
-        records = db.GqlQuery("select * from BlogPost order by created desc limit 20")
+        records = db.GqlQuery(
+            "select * from BlogPost order by created desc limit 20")
         return records.fetch(limit=20)
 
     def like_count(self, blog_id):
@@ -91,11 +99,12 @@ class MainPage(Handler):
             for blod in self.last_20():
                 post_id = blod.key().id_or_name()
                 total_count[post_id] = self.like_count(post_id)
-            index_dic = {'title':"Rayons Blog", 'logout':'Logout',
-                         'blogs':self.last_20(), 'like_count':total_count, 'username':user.username}
+            index_dic = {'title': "Rayons Blog", 'logout': 'Logout', 'blogs': self.last_20(
+            ), 'like_count': total_count, 'username': str(user.username).upper()}
         else:
-            index_dic = {'title':"Rayons Blog"}
+            index_dic = {'title': "Rayons Blog"}
         self.render("index.html", **index_dic)
+
 
 class Signup(Handler):
     """ sing up processing class """
@@ -136,22 +145,26 @@ class Signup(Handler):
 
     def get(self):
         """ render Signup page"""
-        signup = {'title':"Subscribe to my Blogs", "username":self.request.get("username")}
+        signup = {'title': "Subscribe to my Blogs",
+                  "username": self.request.get("username")}
         self.render("signup.html", **signup)
 
     def post(self):
         user_val, user = self.val_username(self.request.get("username"))
-        pass_val, password = self.val_pass(self.request.get("password"), self.request.get("verify"))
+        pass_val, password = self.val_pass(
+            self.request.get("password"), self.request.get("verify"))
         email = self.request.get("email")
         is_user = self.is_user(user)
-        secret = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        secret = ''.join(random.choice(
+            string.ascii_uppercase + string.digits) for _ in range(8))
         if email is not None or email <> "":
             email_val, email = self.val_email(email)
         else:
             email_val = True
         if user_val and pass_val and email_val and is_user:
             hash_pass = self.hash_str(password, secret)
-            user = User(username=user, password=hash_pass, secret=secret, email=email)
+            user = User(username=user, password=hash_pass,
+                        secret=secret, email=email)
             user.put()
             user_id = user.key().id()
             self.response.headers.add_header(
@@ -169,23 +182,22 @@ class Signup(Handler):
                 emailinv = "Invalid Email"
             if is_user == False:
                 userinv = "User Already exist"
-            error_dic = {"useinv":userinv, "passinv":passinv,
-                         "emailinv":emailinv, "username":user_val, "email": email}
+            error_dic = {"useinv": userinv, "passinv": passinv,
+                         "emailinv": emailinv, "username": user_val, "email": email}
             self.render("signup.html", **error_dic)
+
 
 class Welcome(Handler):
     """ main user landing page after login """
+
     def post_by_user(self, created_by):
         """ get post by user """
         records = db.GqlQuery(
             "select * from BlogPost where created_by = :1 order by created desc", created_by)
         return records.fetch(limit=10)
-    
-    def get_likes(self):
-        """ get likes """    
 
     def get(self):
-        #added pause to allow DB to update for First time User
+        # added pause to allow DB to update for First time User
         time.sleep(1)
         user_d = self.request.cookies.get('user_id')
         if user_d:
@@ -194,7 +206,8 @@ class Welcome(Handler):
             if user:
                 if user.password == user_hash:
                     blog_post = self.post_by_user(user_id)
-                    details = {"username":user.username, "logout":"Logout", "blog_post": blog_post}
+                    details = {"username": str(user.username).upper(
+                    ), "logout": "Logout", "blog_post": blog_post}
                     self.render("welcome.html", **details)
                 else:
                     self.redirect("/signup")
@@ -202,10 +215,11 @@ class Welcome(Handler):
                 self.redirect("/signup")
         else:
             self.redirect("/signup")
-    
+
 
 class Login(Handler):
     """ application login """
+
     def get(self):
         """ render login page"""
         self.render("login.html")
@@ -221,19 +235,23 @@ class Login(Handler):
             pass_hash = self.hash_str(password, secret)
             if user_d[0].password == pass_hash:
                 user_id = user_d[0].key().id()
-                self.response.headers.add_header('Set-Cookie', 'user_id=%s|%s; Path=/ ' % (user_id,pass_hash))
+                self.response.headers.add_header(
+                    'Set-Cookie', 'user_id=%s|%s; Path=/ ' % (user_id, pass_hash))
                 self.redirect("/")
             else:
                 error = "Invalid Password"
-                self.render("login.html", **{"username":user, "error":error})
+                self.render("login.html", **{"username": user, "error": error})
         else:
             error = "no such user !!"
-            self.render("login.html", **{"username":user, "error":error})
-    
+            self.render("login.html", **{"username": user, "error": error})
+
+
 class Logout(Handler):
+
     def get(self):
         self.response.delete_cookie('user_id')
         self.redirect("/login")
+
 
 class NewPost(Handler):
     """ new blog post class """
@@ -242,7 +260,7 @@ class NewPost(Handler):
         """ render new blog post form """
         user_d = self.request.cookies.get('user_id')
         if user_d:
-            details = {"logout":"Logout"}
+            details = {"logout": "Logout"}
             self.render("new.html", **details)
         else:
             self.redirect("/login")
@@ -251,35 +269,40 @@ class NewPost(Handler):
         """ create new blog post """
         subject = self.request.get("subject")
         post = self.request.get("post")
-        user_d = self.request.cookies.get('user_id')
+        user_d = self.request.cookies.get('user_id').split("|")[0]
         if user_d:
             if subject and post:
-                new_post = BlogPost(subject=subject, content=post, created_by=user_d.split("|")[0])
+                user = User.get_by_id(int(user_d))
+                new_post = BlogPost(
+                    subject=subject, content=post, created_by=user_d, username=user.username)
                 new_post.put()
                 new_post_id = new_post.key().id()
-                self.redirect("/single?post_id="+str(new_post_id))
+                self.redirect("/single?post_id=" + str(new_post_id))
             else:
-                details = {"error":"you need both subject and content"}
+                details = {"error": "you need both subject and content"}
                 self.render("new.html", **details)
         else:
             self.redirect("/login")
 
+
 class SinglePost(Handler):
-     """ display single post"""
-     def get_comments(self, blog_id):
-         """ get comments for a single post """
-         records = db.GqlQuery("select * from Bcomments where blog_id = :1", blog_id)
-         return records.fetch(limit=100)
+    """ display single post"""
 
+    def get_comments(self, blog_id):
+        """ get comments for a single post """
+        records = db.GqlQuery(
+            "select * from Bcomments where blog_id = :1", blog_id)
+        return records.fetch(limit=100)
 
-     def get(self):
+    def get(self):
         """ render single blog post """
         post_id = self.request.get("post_id")
         blogpost = BlogPost.get_by_id(int(post_id))
         comments = self.get_comments(post_id)
-        details = {"blogpost":blogpost, "logout":'Logout', 'post_id':post_id,
+        details = {"blogpost": blogpost, "logout": 'Logout', 'post_id': post_id,
                    'comments': comments}
         self.render("/single.html", **details)
+
 
 class Edit(Handler):
     """ Edit Post """
@@ -291,7 +314,8 @@ class Edit(Handler):
         if user_d:
             blogpost = BlogPost.get_by_id(int(post_id))
             if blogpost.created_by == user_d.split("|")[0]:
-                details = {"blogpost":blogpost, "logout":'Logout', 'post_id':post_id}
+                details = {"blogpost": blogpost,
+                           "logout": 'Logout', 'post_id': post_id}
                 self.render("/edit.html", **details)
             else:
                 self.redirect("/error?error=You cannot edit this post")
@@ -311,17 +335,20 @@ class Edit(Handler):
                     blogpost.subject = subject
                     blogpost.content = post
                     blogpost.put()
-                    details = {"blogpost":blogpost, "logout":'Logout', 'post_id':post_id}
+                    details = {"blogpost": blogpost,
+                               "logout": 'Logout', 'post_id': post_id}
                     self.render("/single.html", **details)
                 else:
-                    details = {"blogpost":blogpost, "logout":'Logout',
-                               "error":"you need both subject and content"}
+                    details = {"blogpost": blogpost, "logout": 'Logout',
+                               "error": "you need both subject and content"}
                     self.render("/edit.html", **details)
             else:
                 self.redirect("/login")
 
+
 class Delete(Handler):
     """ delete records """
+
     def get(self):
         user_d = self.request.cookies.get('user_id')
         post_id = self.request.get("post_id")
@@ -335,8 +362,10 @@ class Delete(Handler):
         else:
             self.redirect("/login")
 
+
 class Likes(Handler):
     """ likes or unlike post"""
+
     def count_likes(self, created_by, blog_id):
         results = db.GqlQuery(
             "select * from Plikes where created_by = :1 and blog_id = :2", created_by, blog_id)
@@ -346,15 +375,14 @@ class Likes(Handler):
         else:
             return 1
 
-    def unlike(self,user_id, blog_id):
-       results = db.GqlQuery(
-           "select * from Plikes where created_by = :1 and blog_id = :2", user_id, blog_id)
-       results.fetch(limit=1)
-       if results <> []:
-          results[0].delete()
-       else:
-           pass #do nothing
-
+    def unlike(self, user_id, blog_id):
+        results = db.GqlQuery(
+            "select * from Plikes where created_by = :1 and blog_id = :2", user_id, blog_id)
+        results.fetch(limit=1)
+        if results <> []:
+            results[0].delete()
+        else:
+            pass  # do nothing
 
     def get(self):
         user_d = self.request.cookies.get('user_id').split("|")[0]
@@ -377,18 +405,21 @@ class Likes(Handler):
                         time.sleep(0.2)
                         self.redirect("/")
                     else:
-                        self.redirect("/error?error=You Already Liked This Post")
+                        self.redirect(
+                            "/error?error=You Already Liked This Post")
         else:
             self.redirect("/login")
 
+
 class Comment(Handler):
     """ add comment """
+
     def get(self):
         user_d = self.request.cookies.get('user_id')
         post_id = self.request.get("post_id")
         blogpost = BlogPost.get_by_id(int(post_id))
         if user_d:
-            context = {"logout":'Logout', 'post_id':post_id}
+            context = {"logout": 'Logout', 'post_id': post_id}
             self.render("/comment.html", **context)
         else:
             self.redirect("/login")
@@ -399,31 +430,93 @@ class Comment(Handler):
         comment = self.request.get("comment")
         if user_d:
             if comment:
-                comment = Bcomments(comment=comment, created_by=user_d, blog_id=post_id)
+                user = User.get_by_id(int(user_d))
+                comment = Bcomments(
+                    comment=comment, created_by=user_d, blog_id=post_id, username=user.username)
                 comment.put()
                 time.sleep(0.2)
-                self.redirect("/single?post_id="+post_id)
+                self.redirect("/single?post_id=" + post_id)
             else:
-                context = {'error':'you need to submit a comment !!!', "logout":'Logout'}
+                context = {
+                    'error': 'you need to submit a comment !!!', "logout": 'Logout'}
                 self.render("/comment.html", **context)
         else:
             self.redirect("/login")
 
+
+class EditComment(Handler):
+    """ edit comment """
+
+    def get(self):
+        user_d = self.request.cookies.get('user_id').split("|")[0]
+        com_id = self.request.get("com_id")
+        if user_d:
+            comment = Bcomments.get_by_id(int(com_id))
+            if comment.created_by == user_d:
+                context = {"logout": 'Logout', 'comment':comment}
+                self.render('/edit_comment.html', **context)
+            else:
+                self.redirect(
+                    "/error?error=you cannot edit this comment")
+        else:
+            self.redirect("/login")
+
+    def post(self):
+        user_d = self.request.cookies.get('user_id').split("|")[0]
+        com = self.request.get('com')
+        print com
+        com_id = self.request.get('com_id')
+        if user_d:
+            comment = Bcomments.get_by_id(int(com_id))
+            if comment.created_by == user_d:
+                comment.comment = com
+                comment.put()
+                time.sleep(0.2)
+                self.redirect("/single?post_id=" + str(comment.blog_id))
+            else:
+                self.redirect(
+                    "/error?error=you cannot edit this comment")
+        else:
+            self.redirect("/login")
+
+
+class DeleteComment(Handler):
+    """ delete comment"""
+
+    def get(self):
+        com_id = self.request.get("com_id")
+        post_id = self.request.get("post_id")
+        user_id = self.request.get("created_by")
+        user_d = self.request.cookies.get('user_id').split("|")[0]
+        if user_d:
+            if user_d == user_id:
+                com = Bcomments.get_by_id(int(com_id))
+                com.delete()
+                time.sleep(0.2)
+                self.redirect("/single?post_id=" + str(post_id))
+            else:
+                self.redirect(
+                    "/error?error=you can only delete your own comment")
+        else:
+            self.redirect("/login")
+
+
 class ErrorHandler(Handler):
+
     def get(self):
         user_d = self.request.cookies.get('user_id')
         error = self.request.get("error")
         if user_d:
-            context = {'error': error, "logout":'Logout'}
+            context = {'error': error, "logout": 'Logout'}
         else:
             context = {'error': error}
         self.render("/error.html", **context)
-
 
 
 app = webapp2.WSGIApplication([
     ('/', MainPage), ('/signup', Signup), ('/welcome', Welcome),
     ('/login', Login), ('/logout', Logout), ('/new', NewPost),
     ('/single', SinglePost), ('/edit', Edit), ('/delete', Delete),
-    ('/like', Likes), ('/error', ErrorHandler), ('/comment', Comment)], debug=True)
-
+    ('/like', Likes), ('/error', ErrorHandler), ('/comment', Comment),
+    ('/edit_comment', EditComment), ('/del_com', DeleteComment)
+], debug=True)

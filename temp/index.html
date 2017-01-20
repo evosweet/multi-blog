@@ -49,7 +49,7 @@
                 <h4><span class="label label-primary"> Title: {{ bpost.subject }}</span></h4>
                 <div class="well well-lg">
                     <div class="panel panel-default">
-                        <div class="panel-heading">Post Likes {{ like_count[ bpost.key().id_or_name()] }} </div>
+                        <div class="panel-heading">Post Likes {{ like_count[ bpost.key().id_or_name()] }} / Posted By {{bpost.username}}</div>
                         <div class="panel-body">
                             {{ bpost.content }}
                         </div>

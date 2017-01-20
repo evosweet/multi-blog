@@ -9,14 +9,21 @@
             </div>
         </div>
     </div>
-    <a class="btn btn-default" href="/edit?post_id={{post_id}}" role="button">Edit</a>
-    <a class="btn btn-default" href="/delete?post_id={{post_id}}" role="button">Delete</a>
+    <a class="btn btn-default-sm" href="/edit?post_id={{post_id}}" role="button">Edit</a>
+    <a class="btn btn-default-sm" href="/delete?post_id={{post_id}}" role="button">Delete</a>
+    <a class="btn btn-default-sm" href="/comment?post_id={{blogpost.key().id_or_name()}}" role="button">Comment</a>
 <div class="panel panel-default">
      <div class="panel-heading">Comments</div>
     <div class="panel-body">
         <ul class="list-group">
         {% for comment in comments %}
                 <li class="list-group-item"> {{ comment.comment }} </li>
+                <a class="btn btn-default-sm" href="/edit_comment?com_id={{comment.key().id_or_name()}}&comment={{comment.comment}}" role="button">Edit</a>
+                <a class="btn btn-default-sm" href="/del_com?com_id={{comment.key().id_or_name()}}&post_id={{post_id}}&created_by={{comment.created_by}}" role="button">Delete</a>
+                <br>
+                Comment by {{ comment.username }}
+        {% else %}
+            <li class="list-group-item">Sorry No Comments</li>
         {% endfor %}
         </ul>
     </div>

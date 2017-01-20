@@ -1,17 +1,20 @@
 {% extends "index.html" %} {% block content%}
 <div class="col-md-4"></div>
 <div class="col-md-4">
-    Welcome, {{username}}
+   <h2> Welcome {{username}}</h2>
     <ul class="list-group">
         {% for bpost in blog_post %}
-        <li class="list-group-item">
-            <h4><span class="label label-primary"> Title: {{ bpost.subject }}</span></h4>
-            <div class="well well-lg">
-                {{ bpost.content }}
-            </div>
-            <a class="btn btn-default" href="/edit?post_id={{bpost.key().id_or_name()}}" role="button">Edit</a>
-            <a class="btn btn-default" href="/delete?post_id={{bpost.key().id_or_name()}}" role="button">Delete</a>
-        </li>
+            <li class="list-group-item">
+                <h4><span class="label label-primary"> Title: {{ bpost.subject }}</span></h4>
+                <div class="well well-lg">
+                    {{ bpost.content }}
+                </div>
+                <a class="btn btn-default-sm" href="/edit?post_id={{bpost.key().id_or_name()}}" role="button">Edit</a>
+                <a class="btn btn-default-sm" href="/delete?post_id={{bpost.key().id_or_name()}}" role="button">Delete</a>
+                <a class="btn btn-default-sm" href="/comment?post_id={{bpost.key().id_or_name()}}" role="button">Comment</a>
+            </li>
+        {% else %}
+            Sorry {{username}}, you have no post
         {% endfor %}
     </ul>
 </div>
