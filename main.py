@@ -19,7 +19,7 @@ USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 PASS_RE = re.compile(r"^.{3,20}$")
 EMAIL_RE = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
 
-
+#data modles
 class User(db.Model):
     """ application user model """
     username = db.StringProperty(required=True)
@@ -28,7 +28,6 @@ class User(db.Model):
     email = db.StringProperty()
     created = db.DateTimeProperty(auto_now_add=True)
 
-
 class BlogPost(db.Model):
     """ application blog model """
     subject = db.StringProperty(required=True)
@@ -36,14 +35,12 @@ class BlogPost(db.Model):
     created_by = db.StringProperty(required=True)
     username = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
-
-
+    
 class Plikes(db.Model):
     """ Blog like model"""
     blog_id = db.StringProperty(required=True)
     created_by = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
-
 
 class Bcomments(db.Model):
     """ Blog comment model """
@@ -52,7 +49,6 @@ class Bcomments(db.Model):
     blog_id = db.StringProperty(required=True)
     username = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
-
 
 class Handler(webapp2.RequestHandler):
     """ general template render functions """
@@ -79,6 +75,7 @@ class MainPage(Handler):
     """ Application Landing Page """
 
     def last_20(self):
+        """ get the last 20 blog post"""
         records = db.GqlQuery(
             "select * from BlogPost order by created desc limit 20")
         return records.fetch(limit=20)
@@ -150,11 +147,13 @@ class Signup(Handler):
         self.render("signup.html", **signup)
 
     def post(self):
+        """ validate and create user"""
         user_val, user = self.val_username(self.request.get("username"))
         pass_val, password = self.val_pass(
             self.request.get("password"), self.request.get("verify"))
         email = self.request.get("email")
         is_user = self.is_user(user)
+        #ramdon generated secret
         secret = ''.join(random.choice(
             string.ascii_uppercase + string.digits) for _ in range(8))
         if email is not None or email <> "":
@@ -197,8 +196,8 @@ class Welcome(Handler):
         return records.fetch(limit=10)
 
     def get(self):
-        # added pause to allow DB to update for First time User
-        time.sleep(1)
+        """ render single user post"""
+        time.sleep(1) #added sleep to allow db to update
         user_d = self.request.cookies.get('user_id')
         if user_d:
             user_id, user_hash = user_d.split("|")
@@ -221,19 +220,20 @@ class Login(Handler):
     """ application login """
 
     def get(self):
-        """ render login page"""
+        """ render login page """
         self.render("login.html")
 
     def post(self):
+        """ process user login request """
         user = self.request.get("username")
         password = self.request.get("password")
         error = ""
-        u = db.GqlQuery("select * from User where username = :1", user)
-        user_d = u.fetch(limit=1)
+        u_query = db.GqlQuery("select * from User where username = :1", user)
+        user_d = u_query.fetch(limit=1)
         if user_d <> []:
             secret = str(user_d[0].secret)
-            pass_hash = self.hash_str(password, secret)
-            if user_d[0].password == pass_hash:
+            pass_hash = self.hash_str(password, secret) #create hash
+            if user_d[0].password == pass_hash: #validate hashed password
                 user_id = user_d[0].key().id()
                 self.response.headers.add_header(
                     'Set-Cookie', 'user_id=%s|%s; Path=/ ' % (user_id, pass_hash))
@@ -249,6 +249,7 @@ class Login(Handler):
 class Logout(Handler):
 
     def get(self):
+        """ Delete user cookie """
         self.response.delete_cookie('user_id')
         self.redirect("/login")
 
@@ -350,6 +351,7 @@ class Delete(Handler):
     """ delete records """
 
     def get(self):
+        """ delete blog post """
         user_d = self.request.cookies.get('user_id')
         post_id = self.request.get("post_id")
         blogpost = BlogPost.get_by_id(int(post_id))
@@ -367,6 +369,7 @@ class Likes(Handler):
     """ likes or unlike post"""
 
     def count_likes(self, created_by, blog_id):
+        """ get a count of likes by id """
         results = db.GqlQuery(
             "select * from Plikes where created_by = :1 and blog_id = :2", created_by, blog_id)
         count = results.fetch(limit=1)
@@ -376,6 +379,7 @@ class Likes(Handler):
             return 1
 
     def unlike(self, user_id, blog_id):
+        """ delete like by id """
         results = db.GqlQuery(
             "select * from Plikes where created_by = :1 and blog_id = :2", user_id, blog_id)
         results.fetch(limit=1)
@@ -385,6 +389,7 @@ class Likes(Handler):
             pass  # do nothing
 
     def get(self):
+        """ process like unlike request """
         user_d = self.request.cookies.get('user_id').split("|")[0]
         post_id = self.request.get("post_id")
         req_type = self.request.get("type")
@@ -415,6 +420,7 @@ class Comment(Handler):
     """ add comment """
 
     def get(self):
+        """ process / validate comment request """
         user_d = self.request.cookies.get('user_id')
         post_id = self.request.get("post_id")
         blogpost = BlogPost.get_by_id(int(post_id))
@@ -425,6 +431,7 @@ class Comment(Handler):
             self.redirect("/login")
 
     def post(self):
+        """ create / validate comment """
         user_d = self.request.cookies.get('user_id').split("|")[0]
         post_id = self.request.get("post_id")
         comment = self.request.get("comment")
@@ -448,6 +455,7 @@ class EditComment(Handler):
     """ edit comment """
 
     def get(self):
+        """ process / valida edit comment request"""
         user_d = self.request.cookies.get('user_id').split("|")[0]
         com_id = self.request.get("com_id")
         if user_d:
@@ -462,6 +470,7 @@ class EditComment(Handler):
             self.redirect("/login")
 
     def post(self):
+        """ process comment update request """
         user_d = self.request.cookies.get('user_id').split("|")[0]
         com = self.request.get('com')
         print com
@@ -484,6 +493,7 @@ class DeleteComment(Handler):
     """ delete comment"""
 
     def get(self):
+        """ delete comment """
         com_id = self.request.get("com_id")
         post_id = self.request.get("post_id")
         user_id = self.request.get("created_by")
@@ -502,8 +512,10 @@ class DeleteComment(Handler):
 
 
 class ErrorHandler(Handler):
+    """ general error processing """
 
     def get(self):
+        """ process errors"""
         user_d = self.request.cookies.get('user_id')
         error = self.request.get("error")
         if user_d:
