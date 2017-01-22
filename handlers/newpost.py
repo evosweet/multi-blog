@@ -1,5 +1,6 @@
 from handler import Handler
 from google.appengine.ext import db
+from dbmodel import BlogPost, User
 
 class NewPost(Handler):
     """ new blog post class """

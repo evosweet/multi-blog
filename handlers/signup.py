@@ -7,7 +7,7 @@ PASS_RE = re.compile(r"^.{3,20}$")
 EMAIL_RE = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
 
 
-class Singup(Handler):
+class Signup(Handler):
     """ Singup up processing class """
 
     def val_pass(self, password, verify):
