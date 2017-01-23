@@ -1,6 +1,7 @@
 from handler import Handler
 from google.appengine.ext import db
 from dbmodel import User, Plikes
+from modelcheck import user_logged_in
 
 
 class MainPage(Handler):
@@ -17,20 +18,18 @@ class MainPage(Handler):
         likes = Plikes.all()
         count = likes.filter("blog_id =", str(blog_id)).count()
         return count
-
+    
+    @user_logged_in
     def get(self):
         """ render the main application landing page """
         user_d = self.request.cookies.get('user_id')
         total_count = {}
-        if user_d:
-            user_id = user_d.split("|")[0]
-            user = User.get_by_id(int(user_id))
-            for blod in self.last_20():
-                post_id = blod.key().id_or_name()
-                total_count[post_id] = self.like_count(post_id)
-            index_dic = {'title': "Rayons Blog", 'logout': 'Logout', 'blogs': self.last_20(
-            ), 'like_count': total_count, 'username': str(user.username).upper()}
-        else:
-            index_dic = {'title': "Rayons Blog"}
+        user_id = user_d.split("|")[0]
+        user = User.get_by_id(int(user_id))
+        for blod in self.last_20():
+            post_id = blod.key().id_or_name()
+            total_count[post_id] = self.like_count(post_id)
+        index_dic = {'title': "Rayons Blog", 'logout': 'Logout', 'blogs': self.last_20(
+        ), 'like_count': total_count, 'username': str(user.username).upper()}
         self.render("index.html", **index_dic)
         

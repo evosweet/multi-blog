@@ -2,7 +2,7 @@ import time
 from handler import Handler
 from google.appengine.ext import db
 from dbmodel import Plikes, BlogPost
-
+from modelcheck import user_logged_in, post_exists
 
 class Likes(Handler):
     """ likes or unlike post"""
@@ -27,30 +27,29 @@ class Likes(Handler):
         else:
             pass  # do nothing
 
+    @user_logged_in
+    @post_exists
     def get(self):
         """ process like unlike request """
         user_d = self.request.cookies.get('user_id').split("|")[0]
         post_id = self.request.get("post_id")
         req_type = self.request.get("type")
         blogpost = BlogPost.get_by_id(int(post_id))
-        if user_d:
-            if blogpost.created_by == user_d:
-                self.redirect("/error?error=You Cannot Like Your Own Post")
+        if blogpost.created_by == user_d:
+            self.redirect("/error?error=You Cannot Like Your Own Post")
+        else:
+            if req_type == 'unlike':
+                self.unlike(user_d, post_id)
+                time.sleep(0.2)
+                self.redirect("/")
             else:
-                if req_type == 'unlike':
-                    self.unlike(user_d, post_id)
+                count = self.count_likes(user_d, post_id)
+                if count == 1:
+                    likes = Plikes(created_by=user_d, blog_id=post_id)
+                    likes.put()
                     time.sleep(0.2)
                     self.redirect("/")
                 else:
-                    count = self.count_likes(user_d, post_id)
-                    if count == 1:
-                        likes = Plikes(created_by=user_d, blog_id=post_id)
-                        likes.put()
-                        time.sleep(0.2)
-                        self.redirect("/")
-                    else:
-                        self.redirect(
-                            "/error?error=You Already Liked This Post")
-        else:
-            self.redirect("/login")
+                    self.redirect(
+                        "/error?error=You Already Liked This Post")
             
