@@ -1,7 +1,7 @@
 import re, random, string
 from handler import Handler
 from google.appengine.ext import db
-
+from dbmodel import User
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 PASS_RE = re.compile(r"^.{3,20}$")
 EMAIL_RE = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")

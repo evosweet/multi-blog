@@ -31,12 +31,12 @@ class Edit(Handler):
         post = self.request.get("post")
         blogpost = BlogPost.get_by_id(int(post_id))
         if subject and post:
+            print subject, post
             blogpost.subject = subject
             blogpost.content = post
             blogpost.put()
-            details = {"blogpost": blogpost,
-                       "logout": 'Logout', 'post_id': post_id}
-            self.render("/single.html", **details)
+            post_id = blogpost.key().id()
+            self.redirect("/single?post_id="+str(post_id))
         else:
             details = {"blogpost": blogpost, "logout": 'Logout',
                        "error": "you need both subject and content"}
